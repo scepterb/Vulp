@@ -1,0 +1,149 @@
+#include <Arduino.h>
+#include <stdio.h>
+#include <math.h>
+#include <cstdlib> // Required for atof
+#include <cstdio> // Required for snprintf
+#include <Wire.h>
+#include "inc/astro_demo_common.h"
+#include "inc/io.h"
+
+// put function declarations here:
+int GalaticToHorizontal(astro_time_t, astro_observer_t, double, double, double *, double *);
+
+astro_observer_t observer;
+astro_time_t obsTime;
+double glat, glon;
+double azimuth, altitude;
+int error = 0;
+
+char alt[10];
+char azi[10];
+
+void setup()
+{
+  // put your setup code here, to run once:
+  setupSerial();
+
+  observer.height = 0.0;
+  char input[24];
+
+  Serial.println("INPUT: observer's latitude on the Earth");
+  read_message(input, sizeof(input));
+  observer.latitude = std::atof(input);
+
+  Serial.println("INPUT: observer's longitude on the Earth:");
+  read_message(input, sizeof(input));
+  observer.longitude = std::atof(input);
+
+  Serial.println("INPUT: IAU 1958 galatic latitude of the target");
+  read_message(input, sizeof(input));
+  glat = std::atof(input);
+
+  Serial.println("INPUT: IAU 1958 galatic longitude of the target");
+  read_message(input, sizeof(input));
+  glon = std::atof(input);
+
+  Serial.println("(optional) INPUT: yyyy-mm-ddThh:mm:ssZ");
+  read_message(input, sizeof(input));
+  if (input[10] == 'T') {
+    Serial.println("Parsing time...");
+    if (ParseTime(input, &obsTime))
+      error = 1;
+    
+  } else {
+    obsTime = Astronomy_CurrentTime();
+  }
+
+  if (GalaticToHorizontal(obsTime, observer, glat, glon, &altitude, &azimuth))
+    error = 1;
+
+  Serial.println(observer.latitude);
+  Serial.println(observer.longitude);
+  Serial.println(glat);
+  Serial.println(glon);
+  Serial.println(obsTime.ut);
+
+  std::snprintf(alt, sizeof(alt), "%10.3lf", altitude);
+  std::snprintf(azi, sizeof(azi), "%10.3lf", azimuth);
+}
+
+void loop()
+{
+  // put your main code here, to run repeatedly:
+  while (error == 1) {Serial.println("error"); delay(1000);}
+  //Serial.println(olat);
+  //Serial.println(olon);
+  //Serial.println(glat);
+  //Serial.println(glon);
+  Serial.println("alt & azi");
+  Serial.print(alt);
+  Serial.print(" ");
+  Serial.println(azi);
+
+  delay(5000);
+}
+
+// put function definitions here:
+int GalaticToHorizontal(
+  astro_time_t time,
+  astro_observer_t observer,
+  double glat,
+  double glon,
+  double *altitude,
+  double *azimuth)
+{
+  astro_rotation_t rot, adjust_rot;
+  astro_spherical_t gsphere, hsphere;
+  astro_vector_t gvec, hvec;
+
+  /*
+    Calculate a rotation matrix that converts
+    galactic coordinates to J2000 equatorial coordinates.
+  */
+  rot = Astronomy_Rotation_GAL_EQJ();
+
+  /*
+    Adjust the rotation matrix to convert galatic to horizontal (HOR).
+  */
+  adjust_rot = Astronomy_Rotation_EQJ_HOR(&time, observer);
+  rot = Astronomy_CombineRotation(rot, adjust_rot);
+
+  /*
+    Convert the galactic coordinates from angles to a unit vector.
+  */
+  gsphere.status = ASTRO_SUCCESS;
+  gsphere.lat = glat;
+  gsphere.lon = glon;
+  gsphere.dist = 1.0;
+  gvec = Astronomy_VectorFromSphere(gsphere, time);
+  if (gvec.status != ASTRO_SUCCESS)
+  {
+    fprintf(stderr, "Astronomy_VectorFromSphere returned error %d\n", gvec.status);
+    return 1;
+  }
+
+  /*
+      Use the rotation matrix to convert the galactic vector to a horizontal vector.
+  */
+  hvec = Astronomy_RotateVector(rot, gvec);
+  if (hvec.status != ASTRO_SUCCESS)
+  {
+    fprintf(stderr, "Astronomy_RotateVector returned error %d\n", hvec.status);
+    return 1;
+  }
+
+  /*
+    Convert the horizontal vector back to angular coordinates: altitude and azimuth.
+    Assuming this is a radio source (not optical), do not correct for refraction.
+  */
+  hsphere = Astronomy_HorizonFromVector(hvec, REFRACTION_NONE);
+  if (hsphere.status != ASTRO_SUCCESS)
+  {
+    fprintf(stderr, "Astronomy_HorizonFromVector returned error %d\n", hsphere.status);
+    return 1;
+  }
+
+  *altitude = hsphere.lat;
+  *azimuth = hsphere.lon;
+  return 0;
+}

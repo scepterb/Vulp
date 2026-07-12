@@ -1,192 +1,87 @@
-#include <Arduino.h>
-#include <stdio.h>
-#include <math.h>
-#include <cstdlib> // Required for atof
-#include <cstdio> // Required for snprintf
-#include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
-#include <utility/imumaths.h>
-#include "inc/astro_demo_common.h"
+#include <Adafruit_BNO08x.h>
+
 #include "inc/io.h"
 
-// put function declarations here:
-int GalaticToHorizontal(astro_time_t, astro_observer_t, double, double, double *, double *);
+struct euler_t {
+  float yaw;
+  float pitch;
+  float roll;
+} ypr;
 
-astro_observer_t observer;
-astro_time_t obsTime;
-double glat, glon;
-double azimuth, altitude;
-int error = 0;
+#define BNO08X_RESET -1
+Adafruit_BNO08x bno08x(BNO08X_RESET);
+sh2_SensorValue_t sensorValue;
 
-char alt[10];
-char azi[10];
+// Top frequency is about 250Hz but this report is more accurate
+sh2_SensorId_t reportType = SH2_ARVR_STABILIZED_RV;
+long reportIntervalUs = 5000;  // at 200Hz
 
-void setup()
-{
-  // put your setup code here, to run once:
+void setReports(sh2_SensorId_t reportType, long report_interval) {
+  Serial.println("Setting desired reports");
+  if (!bno08x.enableReport(reportType, report_interval)) {
+    Serial.println("Could not enable stabilized remote vector");
+  }
+}
+
+void setup(void) {
   setupSerial();
 
-  observer.height = 0.0;
-  char input[24];
-
-  Serial.println("INPUT: observer's latitude on the Earth");
-  read_message(input, sizeof(input));
-  observer.latitude = std::atof(input);
-
-  Serial.println("INPUT: observer's longitude on the Earth:");
-  read_message(input, sizeof(input));
-  observer.longitude = std::atof(input);
-
-  Serial.println("INPUT: IAU 1958 galatic latitude of the target");
-  read_message(input, sizeof(input));
-  glat = std::atof(input);
-
-  Serial.println("INPUT: IAU 1958 galatic longitude of the target");
-  read_message(input, sizeof(input));
-  glon = std::atof(input);
-
-  Serial.println("(optional) INPUT: yyyy-mm-ddThh:mm:ssZ");
-  read_message(input, sizeof(input));
-  if (input[10] == 'T') {
-    Serial.println("Parsing time...");
-    if (ParseTime(input, &obsTime))
-      error = 1;
-    
-  } else {
-    obsTime = Astronomy_CurrentTime();
+  if (!bno08x.begin_I2C()) {
+    Serial.println("Failed to find BNO08x chip");
+    while (1) {
+      delay(10);
+    }
   }
+  Serial.println("BNO08x Found!");
+  setReports(reportType, reportIntervalUs);
 
-  if (GalaticToHorizontal(obsTime, observer, glat, glon, &altitude, &azimuth))
-    error = 1;
-
-  Serial.println(observer.latitude);
-  Serial.println(observer.longitude);
-  Serial.println(glat);
-  Serial.println(glon);
-  Serial.println(obsTime.ut);
-
-  std::snprintf(alt, sizeof(alt), "%10.3lf", altitude);
-  std::snprintf(azi, sizeof(azi), "%10.3lf", azimuth);
-}
-
-void loop()
-{
-  // put your main code here, to run repeatedly:
-  while (error == 1) {Serial.println("error"); delay(1000);}
-  //Serial.println(olat);
-  //Serial.println(olon);
-  //Serial.println(glat);
-  //Serial.println(glon);
-  Serial.println("alt & azi");
-  Serial.print(alt);
-  Serial.print(" ");
-  Serial.println(azi);
-
-  delay(5000);
-}
-
-// put function definitions here:
-int GalaticToHorizontal(
-  astro_time_t time,
-  astro_observer_t observer,
-  double glat,
-  double glon,
-  double *altitude,
-  double *azimuth)
-{
-  astro_rotation_t rot, adjust_rot;
-  astro_spherical_t gsphere, hsphere;
-  astro_vector_t gvec, hvec;
-
-  /*
-    Calculate a rotation matrix that converts
-    galactic coordinates to J2000 equatorial coordinates.
-  */
-  rot = Astronomy_Rotation_GAL_EQJ();
-
-  /*
-    Adjust the rotation matrix to convert galatic to horizontal (HOR).
-  */
-  adjust_rot = Astronomy_Rotation_EQJ_HOR(&time, observer);
-  rot = Astronomy_CombineRotation(rot, adjust_rot);
-
-  /*
-    Convert the galactic coordinates from angles to a unit vector.
-  */
-  gsphere.status = ASTRO_SUCCESS;
-  gsphere.lat = glat;
-  gsphere.lon = glon;
-  gsphere.dist = 1.0;
-  gvec = Astronomy_VectorFromSphere(gsphere, time);
-  if (gvec.status != ASTRO_SUCCESS)
-  {
-    fprintf(stderr, "Astronomy_VectorFromSphere returned error %d\n", gvec.status);
-    return 1;
-  }
-
-  /*
-      Use the rotation matrix to convert the galactic vector to a horizontal vector.
-  */
-  hvec = Astronomy_RotateVector(rot, gvec);
-  if (hvec.status != ASTRO_SUCCESS)
-  {
-    fprintf(stderr, "Astronomy_RotateVector returned error %d\n", hvec.status);
-    return 1;
-  }
-
-  /*
-    Convert the horizontal vector back to angular coordinates: altitude and azimuth.
-    Assuming this is a radio source (not optical), do not correct for refraction.
-  */
-  hsphere = Astronomy_HorizonFromVector(hvec, REFRACTION_NONE);
-  if (hsphere.status != ASTRO_SUCCESS)
-  {
-    fprintf(stderr, "Astronomy_HorizonFromVector returned error %d\n", hsphere.status);
-    return 1;
-  }
-
-  *altitude = hsphere.lat;
-  *azimuth = hsphere.lon;
-  return 0;
-}
-
-
-  
-Adafruit_BNO055 bno = Adafruit_BNO055(55);
-
-void setup(void) 
-{
-  Serial.begin(9600);
-  Serial.println("Orientation Sensor Test"); Serial.println("");
-  
-  /* Initialise the sensor */
-  if(!bno.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while(1);
-  }
-  
-  delay(1000);
-    
-  bno.setExtCrystalUse(true);
-}
-
-void loop(void) 
-{
-  /* Get a new sensor event */ 
-  sensors_event_t event; 
-  bno.getEvent(&event);
-  
-  /* Display the floating point data */
-  Serial.print("X: ");
-  Serial.print(event.orientation.x, 4);
-  Serial.print("\tY: ");
-  Serial.print(event.orientation.y, 4);
-  Serial.print("\tZ: ");
-  Serial.print(event.orientation.z, 4);
-  Serial.println("");
-  
   delay(100);
+}
+
+void quaternionToEuler(float qr, float qi, float qj, float qk, euler_t* ypr, bool degrees = false) {
+  float sqr = sq(qr);
+  float sqi = sq(qi);
+  float sqj = sq(qj);
+  float sqk = sq(qk);
+
+  ypr->yaw = atan2(2.0 * (qi * qj + qk * qr), (sqi - sqj - sqk + sqr));
+  ypr->pitch = asin(-2.0 * (qi * qk - qj * qr) / (sqi + sqj + sqk + sqr));
+  ypr->roll = atan2(2.0 * (qj * qk + qi * qr), (-sqi - sqj + sqk + sqr));
+
+  if (degrees) {
+    ypr->yaw *= RAD_TO_DEG;
+    ypr->pitch *= RAD_TO_DEG;
+    ypr->roll *= RAD_TO_DEG;
+  }
+}
+
+void quaternionToEulerRV(sh2_RotationVectorWAcc_t* rotational_vector, euler_t* ypr, bool degrees = false) {
+  quaternionToEuler(rotational_vector->real, rotational_vector->i, rotational_vector->j, rotational_vector->k, ypr,
+                    degrees);
+}
+
+void loop() {
+  if (bno08x.wasReset()) {
+    Serial.print("sensor was reset ");
+    setReports(reportType, reportIntervalUs);
+  }
+
+  if (bno08x.getSensorEvent(&sensorValue)) {
+    // we retrieve a rotation vector from the sensor
+    quaternionToEulerRV(&sensorValue.un.arvrStabilizedRV, &ypr, true);
+
+    static long last = 0;
+    long now = millis();
+
+    if (now - last >= 250) {
+      Serial.print(sensorValue.status);  // This is accuracy in the range of 0 to 3
+      Serial.print("\t");
+      Serial.print(ypr.roll);
+      Serial.print("\t");
+      Serial.print(ypr.pitch);
+      Serial.print("\t");
+      Serial.println(ypr.yaw);
+      last = now;
+    }
+  }
 }

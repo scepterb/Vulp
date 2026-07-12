@@ -53,5 +53,5 @@ void read_message(void *buf, uint16_t len)
 
 void setupSerial() {
   Serial.begin(115200);
-  while (!Serial) {}
+  while (!Serial) delay(10);
 }
