@@ -1,0 +1,5 @@
+CompileFlags:
+  Add: [-DPLATFORMIO]
+  Remove: [-mlong-calls, -fno-tree-switch-conversion]
+Diagnostics:
+  Suppress: [ovl_diff_return_type]

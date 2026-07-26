@@ -4,10 +4,12 @@
  * @date 2026
  */
 
+#include <Adafruit_BNO08x.h>
+#include <Arduino.h>
 #include "inc/bno085.h"
 
 sh2_SensorId_t reportType = SH2_ARVR_STABILIZED_RV;
-long reportIntervalUs = 5000;  // at 200Hz
+long reportIntervalUs = 20000;  // at 50Hz
 
 void BNO085::setupBNO085(bool reset) {
   if (!reset) {

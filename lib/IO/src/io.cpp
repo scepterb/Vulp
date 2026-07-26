@@ -4,6 +4,8 @@
  * @date 2026
  */
 
+#include <Arduino.h>
+#include <stdio.h>
 #include "inc/io.h"
 
 int read_byte_blocking() {

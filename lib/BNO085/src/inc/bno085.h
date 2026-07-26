@@ -1,5 +1,7 @@
+#ifndef __BNO085_H
+#define __BNO085_H
+
 #include <Adafruit_BNO08x.h>
-#include <Arduino.h>
 
 struct euler_t {
   float yaw;
@@ -25,3 +27,5 @@ class BNO085 {
   void checkSensor();
   bool wasReset();
 };
+
+#endif
