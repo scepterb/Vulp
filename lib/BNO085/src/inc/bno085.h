@@ -3,6 +3,8 @@
 
 #include <Adafruit_BNO08x.h>
 
+#define RESET_CAUSE_QUERY_FAILED 0xFF
+
 struct euler_t {
   float yaw;
   float pitch;
@@ -24,8 +26,14 @@ class BNO085 {
   BNO085() = default;
 
   void setupBNO085(bool = false);
-  void checkSensor();
+
+  /** @brief Services the sensor, returning true if a fresh report was detected. */
+  bool checkSensor();
   bool wasReset();
+  /** @brief When called after wasReset() returns true, it returns the SH-2 reset cause byte. */
+  uint8_t readResetCause();
+
+  static const char* resetCauseName(uint8_t);
 };
 
 #endif

@@ -1,0 +1,38 @@
+3       ALT = -27.4987 deg  AZ = +273.6873 deg
+3       ALT = -30.2923 deg  AZ = +276.5618 deg
+3       ALT = -33.4749 deg  AZ = +285.6515 deg
+3       ALT = -31.8986 deg  AZ = +297.7275 deg
+3       ALT = -34.7968 deg  AZ = +307.7050 deg
+3       ALT = -38.5816 deg  AZ = +319.2077 deg
+sensor was reset Setting desired reports
+3       ALT = -39.0904 deg  AZ = +320.1709 deg
+2       ALT = -39.2238 deg  AZ = +345.8941 deg
+2       ALT = -38.9402 deg  AZ = +346.6843 deg
+2       ALT = -38.8788 deg  AZ = +348.0778 deg
+2       ALT = -39.2253 deg  AZ = +351.4138 deg
+3       ALT = -41.7040 deg  AZ = +358.8024 deg
+3       ALT = -43.9843 deg  AZ = +5.1219 deg
+sensor was reset Setting desired reports
+2       ALT = -30.2779 deg  AZ = +35.3348 deg
+2       ALT = -20.8689 deg  AZ = +53.5886 deg
+2       ALT = -25.7708 deg  AZ = +63.0401 deg
+2       ALT = -37.2659 deg  AZ = +70.4017 deg
+2       ALT = -51.2007 deg  AZ = +62.5947 deg
+2       ALT = -54.2002 deg  AZ = +52.4689 deg
+2       ALT = -53.3400 deg  AZ = +46.2110 deg
+2       ALT = -51.2528 deg  AZ = +37.7213 deg
+3       ALT = -49.6545 deg  AZ = +35.8875 deg
+3       ALT = -48.5588 deg  AZ = +33.9767 deg
+3       ALT = -47.9792 deg  AZ = +31.1218 deg
+3       ALT = -47.9433 deg  AZ = +24.9128 deg
+3       ALT = -47.8430 deg  AZ = +24.8204 deg
+3       ALT = -50.1708 deg  AZ = +24.5276 deg
+3       ALT = -58.2895 deg  AZ = +21.1706 deg
+3       ALT = -65.1971 deg  AZ = +6.0618 deg
+sensor was reset Setting desired reports
+2       ALT = -71.4809 deg  AZ = +327.9681 deg
+2       ALT = -68.8119 deg  AZ = +312.8688 deg
+2       ALT = -69.4857 deg  AZ = +314.9334 deg
+2       ALT = -70.8794 deg  AZ = +322.4501 deg
+2       ALT = -72.7958 deg  AZ = +334.8739 deg
+2       ALT = -72.2741 deg  AZ = +349.3941 deg

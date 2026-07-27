@@ -10,6 +10,9 @@ BNO085 imu;
 static astro_observer_t observer;
 static astro_time_t obsTime;
 
+static uint32_t resetCount = 0;
+static uint32_t lastResetMs = 0;
+
 void setup(void) {
   setupSerial();
   imu.setupBNO085();
@@ -23,24 +26,33 @@ void setup(void) {
 
 void loop() {
   if (imu.wasReset()) {
-    /* Ask the hub why it restarted before re-enabling reports. */
+    /* Ask the hub why it restarted before re-enabling reports. A steady reset
+     * interval points at overload/watchdog; a scattered one at power. */
     uint8_t cause = imu.readResetCause();
-    Serial.printf("[reset] cause=%u (%s)\r\n", cause, BNO085::resetCauseName(cause));
+    uint32_t nowMs = millis();
+
+    resetCount++;
+    Serial.printf("[reset #%lu] t=%lums  uptime=%lums  cause=%u (%s)\r\n", resetCount, nowMs,
+                  resetCount == 1 ? nowMs : nowMs - lastResetMs, cause, BNO085::resetCauseName(cause));
+    lastResetMs = nowMs;
 
     imu.setupBNO085(true);
   }
 
   bool fresh = imu.checkSensor();
 
-  // To track if reading is stale
-  static uint32_t reportsSincePrint = 0;
-  if (fresh) reportsSincePrint++;
-
   const double boresight[3] = {-1.0, 0.0, 0.0}; /* body -X forward */
   double ned[3], az, alt;
 
   rotate_vector(imu.ypr.roll, imu.ypr.pitch, imu.ypr.yaw, boresight, ned);
   enu_to_azalt(ned, -8.5, &az, &alt);
+
+  /* Reports arrive far slower than the loop spins, so count them across the
+   * whole print interval rather than testing a single iteration. Zero reports
+   * means the readings below are stale; the count also shows whether the
+   * configured rate is actually being achieved. */
+  static uint32_t reportsSincePrint = 0;
+  if (fresh) reportsSincePrint++;
 
   static uint32_t last = 0;
   uint32_t now = millis();
