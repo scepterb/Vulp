@@ -1,9 +1,10 @@
 #ifndef __ASTRO_POINT_H
 #define __ASTRO_POINT_H
 
-#include "inc/astro_demo_common.h"  // needed for types
+#define YAW_IS_COMPASS_HEADING 0
+#define FLIP_PITCH 0
 
-#define USING_ENU 1
+#include "inc/astronomy.h"
 
 void rotate_vector(double roll, double pitch, double yaw, const double in[3], double out[3]);
 void enu_to_azalt(const double enu[3], double mag_decl_deg, double* az_deg, double* alt_deg);

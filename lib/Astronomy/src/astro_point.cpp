@@ -13,7 +13,8 @@
  * https://en.wikipedia.org/wiki/Rotation_formulations_in_three_dimensions#Rotation_matrix_%E2%86%92_Euler_angles_(z-x-z_extrinsic)
  */
 void rotate_vector(double roll, double pitch, double yaw, const double in[3], double out[3]) {
-  if (USING_ENU) yaw = 90.0 - yaw;
+  if (YAW_IS_COMPASS_HEADING) yaw = 90.0 - yaw;
+  if (FLIP_PITCH) pitch = -pitch;
 
   /* memoize trig values of roll, pitch, and yaw */
   const double cr = cos(roll * DEG2RAD), sr = sin(roll * DEG2RAD);
@@ -68,7 +69,7 @@ astro_equatorial_t azalt_to_eqj(double az_deg, double alt_deg, astro_time_t time
  */
 astro_equatorial_t imu_to_eqj(double roll_deg, double pitch_deg, double yaw_deg, double magnetic_declination_deg,
                               astro_time_t time, astro_observer_t observer, astro_refraction_t refraction) {
-  const double boresight[3] = {-1.0, 0.0, 0.0}; /* body -X forward */
+  const double boresight[3] = {1.0, 0.0, 0.0}; /* body -X forward */
   double ned[3], az, alt;
 
   rotate_vector(roll_deg, pitch_deg, yaw_deg, boresight, ned);
